@@ -232,7 +232,6 @@ class RowEvent extends BinLogEvent
                 if ($unsigned) {
                     $values[$name] = unpack("I", self::$PACK->read(4))[1];
                 } else {
-
                     $values[$name] = unpack("i", self::$PACK->read(4))[1];
 
                 }
@@ -256,7 +255,6 @@ class RowEvent extends BinLogEvent
                 //$values[$name] = self.__read_new_decimal(column)
             } elseif ($column['type'] == ConstFieldType::BLOB) {
                 //ok
-                //echo 'length_size->>>> '.($column['length_size'])."\n";
                 $values[$name] = self::_read_string($column['length_size'], $column);
 
             }
@@ -284,7 +282,7 @@ class RowEvent extends BinLogEvent
                 $values[$name] = self.__read_date()
                 */
             elseif ($column['type'] == ConstFieldType::TIMESTAMP) {
-                $values[$name] = self::$PACK->readUint32();
+                $values[$name] = date('Y-m-d H:i:s', self::$PACK->readUint32());
             }
 
             # For new date format:
@@ -297,10 +295,12 @@ class RowEvent extends BinLogEvent
                             self::$PACK->read_int_be_by_size(4)), column)
             */
             elseif ($column['type'] == ConstFieldType::LONGLONG) {
-                if ($unsigned)
+                if ($unsigned) {
                     $values[$name] = self::$PACK->readUint64();
-                else
+                } else {
                     $values[$name] = self::$PACK->readInt64();
+                }
+
             }
             /*
             elseif ($column['type'] == ConstFieldType::YEAR:
