@@ -282,12 +282,13 @@ class RowEvent extends BinLogEvent
                 $values[$name] = self.__read_time()
             elseif ($column['type'] == ConstFieldType::DATE:
                 $values[$name] = self.__read_date()
-            elseif ($column['type'] == ConstFieldType::TIMESTAMP:
-                $values[$name] = datetime.datetime.fromtimestamp(
-                        self::$PACK->read_uint32())
+                */
+            elseif ($column['type'] == ConstFieldType::TIMESTAMP) {
+                $values[$name] = self::$PACK->readUint32();
+            }
 
             # For new date format:
-
+/*
             elseif ($column['type'] == ConstFieldType::TIME2:
                 $values[$name] = self.__read_time2(column)
             elseif ($column['type'] == ConstFieldType::TIMESTAMP2:

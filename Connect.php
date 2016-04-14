@@ -1,5 +1,4 @@
 <?php
-
 require_once ROOT . "config/Config.php";
 require_once ROOT . 'db/TimeDate.php';
 require_once ROOT . 'db/DBMysql.php';
@@ -284,6 +283,8 @@ class Connect {
 
         // 校验数据包格式
         PackAuth::success($pack);
+
+        //todo eof pack 0xfe
 
         $binlog = BinLogPack::getInstance();
         $result = $binlog->init($pack, self::$_CHECKSUM);

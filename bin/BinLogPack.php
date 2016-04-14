@@ -50,7 +50,7 @@ class BinLogPack {
         self::$EVENT_INFO['time'] = $timestamp  = unpack('L', $this->read(4))[1];
         self::$EVENT_INFO['type'] = self::$EVENT_TYPE = unpack('C', $this->read(1))[1];
         self::$EVENT_INFO['id']   = $server_id  = unpack('L', $this->read(4))[1];
-        self::$EVENT_INFO['size'] = $event_size = unpack('L', $this->read(4))[1];
+        self::$EVENT_INFO['sivize'] = $event_size = unpack('L', $this->read(4))[1];
         //position of the next event
         self::$EVENT_INFO['pos']  = $log_pos    = unpack('L', $this->read(4))[1];//
         self::$EVENT_INFO['flag'] = $flags      = unpack('S', $this->read(2))[1];
@@ -87,6 +87,10 @@ class BinLogPack {
             //gtid event
 
         }elseif(self::$EVENT_TYPE == 15) {
+            $pack = self::getInstance();
+
+            $pack->read(4);
+
 
         } elseif(self::$EVENT_TYPE == ConstEventType::QUERY_EVENT) {
 
@@ -95,8 +99,8 @@ class BinLogPack {
         if(DEBUG) {
             $msg  = self::$_FILE_NAME;
             $msg .= '-- next pos -> '.$log_pos;
-			$msg .= ' --  typeEvent -> '.self::$EVENT_TYPE;
-			Log::out($msg);
+            $msg .= ' --  typeEvent -> '.self::$EVENT_TYPE;
+            Log::out($msg);
         }
 
         return $data;
@@ -250,15 +254,18 @@ class BinLogPack {
     /*
      * 不支持unsigned long long，溢出
      */
-    public function readUint64()
-    {
+    public function readUint64() {
         $d = $this->read(8);
-        $unpackArr = unpack('I2', $d);
+        $data = unpack('V*', $d);
+        $bigInt = bcadd($data[1], bcmul($data[2], bcpow(2, 32)));
+        return $bigInt;
+
+//        $unpackArr = unpack('I2', $d);
         //$data = unpack("C*", $d);
         //$r = $data[1] + ($data[2] << 8) + ($data[3] << 16) + ($data[4] << 24);//+
         //$r2= ($data[5]) + ($data[6] << 8) + ($data[7] << 16) + ($data[8] << 24);
 
-        return $unpackArr[1] + ($unpackArr[2] << 32);
+//        return $unpackArr[1] + ($unpackArr[2] << 32);
     }
 
     public function readInt64()
