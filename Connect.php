@@ -194,10 +194,11 @@ class Connect {
         if($header === false) return false;
         //消息体长度3bytes 小端序
         $a = unpack("L",$header[0].$header[1].$header[2].chr(0))[1];
+
 //      $a = (int)(ord($header[0]) & 0xFF);
 //      $a += (int)((ord($header[1])& 0xFF) << 8);
 //      $a += (int)((ord($header[2])& 0xFF) << 16);
-
+        
         //序号 1byte 确认消息的顺序
         $pack_num = unpack("C",$header[3])[1];
 

@@ -301,13 +301,13 @@ class RowEvent extends BinLogEvent
                     $values[$name] = self::$PACK->readInt64();
                 }
 
+            } elseif($column['type'] == ConstFieldType::ENUM) {
+                $values[$name] = $column['enum_values'][self::$PACK->read_uint_by_size($column['size']) - 1];
+            } else {
             }
             /*
             elseif ($column['type'] == ConstFieldType::YEAR:
                 $values[$name] = self::$PACK->read_uint8() + 1900
-            elseif ($column['type'] == ConstFieldType::ENUM:
-                $values[$name] = column.enum_values[
-                    self::$PACK->read_uint_by_size(column.size) - 1]
             elseif ($column['type'] == ConstFieldType::SET:
                 # We read set columns as a bitmap telling us which options
                 # are enabled

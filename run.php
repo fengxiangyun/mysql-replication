@@ -31,10 +31,12 @@ while(1) {
             $result = Connect::analysisBinLog($flag);
             $flag = false;
             if ($result) {
-                var_dump($result);
+
                 $data[] = $result;
                 $count++;
                 Log::out($count);
+
+                //持久化 保存当前 file，file-pos
                 if($count%100 == 0) {
                     while(1) {
                         if(pushToKafka($data) === true) {
