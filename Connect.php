@@ -257,6 +257,9 @@ class Connect {
             }
         }
 
+        // 初始化
+        BinLogPack::setFilePos(self::$_FILE, self::$_POS);
+
         $header   = pack('l', 11 + strlen(self::$_FILE));
 
         // COM_BINLOG_DUMP

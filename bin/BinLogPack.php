@@ -43,26 +43,20 @@ class BinLogPack {
         self::$_PACK_KEY   = 0;
         self::$EVENT_INFO  = [];
 
-
-
         $this->advance(1);
 
         self::$EVENT_INFO['time'] = $timestamp  = unpack('L', $this->read(4))[1];
         self::$EVENT_INFO['type'] = self::$EVENT_TYPE = unpack('C', $this->read(1))[1];
         self::$EVENT_INFO['id']   = $server_id  = unpack('L', $this->read(4))[1];
         self::$EVENT_INFO['size'] = $event_size = unpack('L', $this->read(4))[1];
+
         //position of the next event
         self::$EVENT_INFO['pos']  = $log_pos    = unpack('L', $this->read(4))[1];//
         self::$EVENT_INFO['flag'] = $flags      = unpack('S', $this->read(2))[1];
 
-
         $event_size_without_header = $checkSum === true ? ($event_size -23) : $event_size - 19;
 
-
-
         $data = [];
-
-
 
 
         // 映射fileds相关信息
@@ -327,7 +321,20 @@ class BinLogPack {
         return true;
     }
 
+    /**
+     * @biref  初始化设置 file，pos，解决持久化file为空问题
+     * @param $file
+     * @param $pos
+     */
+    public static function setFilePos($file, $pos) {
+        self::$_FILE_NAME = $file;
+        self::$_POS       = $pos;
+    }
 
+    /**
+     * @brief 获取binlog file，pos持久化
+     * @return array
+     */
     public static function getFilePos() {
         return array(self::$_FILE_NAME, self::$_POS);
     }
