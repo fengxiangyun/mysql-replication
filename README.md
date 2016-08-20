@@ -31,7 +31,7 @@ BinLogPack.php打印了事件类型
  可以设置file-pos，程序则从当前设置的位置读取binlog  
  
 ## 流程
- ![image](https://github.com/fengxiangyun/mysql-replication/blob/master/mysql-replication.jpg)  
+ ![image](https://github.com/fengxiangyun/mysql-replication/blob/master/mysql-replication.png)  
  
 ## 联系我
  任何问题可以mail  
