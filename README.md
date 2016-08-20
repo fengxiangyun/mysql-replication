@@ -30,6 +30,9 @@ BinLogPack.php打印了事件类型
  新项目运行时 要删除file-pos，从当前show master status,读取到的filename pos开始读取  
  可以设置file-pos，程序则从当前设置的位置读取binlog  
  
+## 流程
+ ![image](https://github.com/fengxiangyun/mysql-replication/blob/master/mysql-replication.jpg)  
+ 
 ## 联系我
  任何问题可以mail  
  zhaozhiqiang1734@163.com  
