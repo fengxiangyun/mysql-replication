@@ -187,7 +187,7 @@ class BinLogPack {
 
     public function read_int24_be()
     {
-        $data = unpack('CCC', $this->read(3));
+        $data = unpack('C3', $this->read(3));
         $res = ($data[1] << 16) | ($data[2] << 8) | $data[3];
         if ($res >= 0x800000)
             $res -= 0x1000000;
