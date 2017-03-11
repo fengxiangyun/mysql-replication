@@ -1,5 +1,6 @@
 <?php
 /**
+ * https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::Handshake
  * Created by PhpStorm.
  * User: baidu
  * Date: 15/11/19
