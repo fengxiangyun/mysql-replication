@@ -275,6 +275,8 @@ class RowEvent extends BinLogEvent
                 $time .= '.' . self::_add_fsp_to_time($column);
                 $values[$name] = $time;
             }
+	    elseif ($column['type'] == ConstFieldType::DATE)
+                $values[$name] = self::_read_date();
                 /*
             elseif ($column['type'] == ConstFieldType::TIME:
                 $values[$name] = self.__read_time()
@@ -348,17 +350,23 @@ class RowEvent extends BinLogEvent
         if ($year == 0 or $month == 0 or $day == 0)
             return null;
 
-        var_dump($year, $month, $date);exit;
-//
-//        $date = datetime.datetime(
-//        year=year,
-//        month=month,
-//        day=day,
-//        hour=int(time / 10000),
-//        minute=int((time % 10000) / 100),
-//        second=int(time % 100))
-        return $date;
+        return $year.'-'.$month.'-'.$day .' '.intval($time / 10000).':'.intval(($time % 10000) / 100).':'.intval($time % 100);
 
+    }
+	
+    private static function _read_date() {
+        $time = self::$PACK->readUint24();
+
+        if ($time == 0)  # nasty mysql 0000-00-00 dates
+            return null;
+
+        $year = ($time & ((1 << 15) - 1) << 9) >> 9;
+        $month = ($time & ((1 << 4) - 1) << 5) >> 5;
+        $day = ($time & ((1 << 5) - 1));
+        if ($year == 0 || $month == 0 || $day == 0)
+            return null;
+
+        return $year.'-'.$month.'-'.$day;
     }
 
     private static function  _read_datetime2($column) {
