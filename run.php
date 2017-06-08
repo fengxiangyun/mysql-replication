@@ -31,25 +31,25 @@ while(1) {
             $result = Connect::analysisBinLog($flag);
             $flag = false;
             if ($result) {
+                var_dump($result);
+//                 $data[] = $result;
+//                 $count++;
+//                 Log::out($count);
 
-                $data[] = $result;
-                $count++;
-                Log::out($count);
-
-                //持久化 保存当前 file，file-pos
-                if($count%100 == 0) {
-                    while(1) {
-                        if(pushToKafka($data) === true) {
-                            $count = 0;
-                            $data  = [];
-                            $flag  = true;
-                            Log::out("push to kafka success");
-                            break;
-                        } else{
-                            sleep(5);
-                        }
-                    }
-                }
+//                 //持久化 保存当前 file，file-pos
+//                 if($count%100 == 0) {
+//                     while(1) {
+//                         if(pushToKafka($data) === true) {
+//                             $count = 0;
+//                             $data  = [];
+//                             $flag  = true;
+//                             Log::out("push to kafka success");
+//                             break;
+//                         } else{
+//                             sleep(5);
+//                         }
+//                     }
+//                 }
             }
         }
     } catch (BinLogException $e) {
