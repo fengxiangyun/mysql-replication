@@ -42,9 +42,7 @@ class BinLogPack {
         self::$_PACK       = $pack;
         self::$_PACK_KEY   = 0;
         self::$EVENT_INFO  = [];
-
         $this->advance(1);
-
         self::$EVENT_INFO['time'] = $timestamp  = unpack('L', $this->read(4))[1];
         self::$EVENT_INFO['type'] = self::$EVENT_TYPE = unpack('C', $this->read(1))[1];
         self::$EVENT_INFO['id']   = $server_id  = unpack('L', $this->read(4))[1];
@@ -53,11 +51,8 @@ class BinLogPack {
         //position of the next event
         self::$EVENT_INFO['pos']  = $log_pos    = unpack('L', $this->read(4))[1];//
         self::$EVENT_INFO['flag'] = $flags      = unpack('S', $this->read(2))[1];
-
         $event_size_without_header = $checkSum === true ? ($event_size -23) : $event_size - 19;
-
         $data = [];
-
 
         // 映射fileds相关信息
         if (self::$EVENT_TYPE == ConstEventType::TABLE_MAP_EVENT) {
@@ -82,12 +77,13 @@ class BinLogPack {
 
         }elseif(self::$EVENT_TYPE == 15) {
             //$pack = self::getInstance();
-
             //$pack->read(4);
-
-
         } elseif(self::$EVENT_TYPE == ConstEventType::QUERY_EVENT) {
 
+        } elseif(self::$EVENT_TYPE == ConstEventType::HEARTBEAT_LOG_EVENT) {
+            //心跳检测机制
+            $binlog_name = $this->read($event_size_without_header);
+            echo 'heart beat '.$binlog_name."\n";
         }
 
         if(DEBUG) {
@@ -96,13 +92,8 @@ class BinLogPack {
             $msg .= ' --  typeEvent -> '.self::$EVENT_TYPE;
             Log::out($msg);
         }
-
         return $data;
-
-
     }
-
-//    private function
 
     public function read($length) {
         $length = (int)$length;

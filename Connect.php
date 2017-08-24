@@ -86,8 +86,8 @@ class Connect {
         }
         socket_set_block(self::$_SOCKET);
         socket_set_option(self::$_SOCKET, SOL_SOCKET, SO_KEEPALIVE, 1);
-         //socket_set_option(self::$_SOCKET,SOL_SOCKET,SO_SNDTIMEO,['sec' => 2, 'usec' => 5000]);
-         //socket_set_option(self::$_SOCKET,SOL_SOCKET,SO_RCVTIMEO,['sec' => 2, 'usec' => 5000]);
+//         socket_set_option(self::$_SOCKET,SOL_SOCKET,SO_SNDTIMEO,['sec' => 2, 'usec' => 5000]);
+//         socket_set_option(self::$_SOCKET,SOL_SOCKET,SO_RCVTIMEO,['sec' => 2, 'usec' => 5000]);
 
         self::$_FLAG = ConstCapability::$CAPABILITIES ;//| S::$MULTI_STATEMENTS;
         if(self::$_DB) {
@@ -188,6 +188,7 @@ class Connect {
 
 
     private static function _readPacket() {
+
         //消息头
         $header = self::_readBytes(4);
 
@@ -237,13 +238,17 @@ class Connect {
         self::_write($prelude . $sql);
     }
 
-
     public static function getBinlogStream() {
 
         // checksum
         self::$_CHECKSUM = DBHelper::isCheckSum();
         if(self::$_CHECKSUM){
             self::excute("set @master_binlog_checksum= @@global.binlog_checksum");
+        }
+        //heart_period
+        $heart = (int)Config::$DB_CONFIG['heartbeat'];
+        if($heart) {
+            self::excute("set @master_heartbeat_period=".($heart*1000000000));
         }
 
         self::_writeRegisterSlaveCommand();
@@ -314,6 +319,36 @@ class Connect {
             }
         }
         return $result;
+    }
+
+    /**
+     * todo
+     * @breif 注册成slave
+     * @return void
+     */
+    private static function _writeRegisterSlaveCommand2() {
+        $len = 22+strlen(Config::$DB_CONFIG['username'])+
+            strlen(Config::$DB_CONFIG['hostname'])+
+            strlen(Config::$DB_CONFIG['password']);
+        $header   = pack('l', $len);
+
+        // COM_BINLOG_DUMP
+        $data  = $header . chr(ConstCommand::COM_REGISTER_SLAVE);
+
+        $data .= pack('l', self::$_SLAVE_SERVER_ID);
+        $data .= pack('C',strlen(Config::$DB_CONFIG['hostname']));
+        $data .= Config::$DB_CONFIG['hostname'];
+        $data .= pack('C',strlen(Config::$DB_CONFIG['username']));
+        $data .= Config::$DB_CONFIG['username'];
+        $data .= pack('C',strlen(Config::$DB_CONFIG['password']));
+        $data .= Config::$DB_CONFIG['password'];
+
+        $data .= pack('s', Config::$DB_CONFIG['port']);
+        $data .= pack('l', 0);
+        $data .= pack('l', 0);
+        self::_write($data);
+        $result = self::_readPacket();
+        PackAuth::success($result);
     }
 
     /**
