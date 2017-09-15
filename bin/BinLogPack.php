@@ -13,9 +13,10 @@ class BinLogPack {
     public static $EVENT_INFO;
     public static $EVENT_TYPE;
 
-    private static $_PACK_KEY = 0;
+    public static $_PACK_KEY = 0;
     private static $_PACK;
 
+    private static $_BUFFER = '';
     private static $_instance = null;
 
     // 持久化记录 file pos  不能在next event 为dml操作记录
@@ -88,6 +89,7 @@ class BinLogPack {
 
         if(DEBUG) {
             $msg  = self::$_FILE_NAME;
+            $msg .= ' --- ' . $timestamp;
             $msg .= '-- next pos -> '.$log_pos;
             $msg .= ' --  typeEvent -> '.self::$EVENT_TYPE;
             Log::out($msg);
@@ -98,6 +100,19 @@ class BinLogPack {
     public function read($length) {
         $length = (int)$length;
         $n='';
+
+        if(self::$_BUFFER) {
+            $n = substr(self::$_BUFFER, 0 , $length);
+            if(strlen($n) == $length) {
+                self::$_BUFFER = substr(self::$_BUFFER, $length);;
+                return $n;
+            } else {
+                self::$_BUFFER = '';
+                $length = $length - strlen($n);
+            }
+
+        }
+
         for($i = self::$_PACK_KEY; $i < self::$_PACK_KEY + $length; $i++) {
             $n .= self::$_PACK[$i];
         }
@@ -108,6 +123,17 @@ class BinLogPack {
 
     }
 
+    public function get_key() {
+        return self::$_PACK_KEY;
+    }
+
+    public function get_pack() {
+        return self::$_PACK;
+    }
+
+    public function unread($data) {
+        self::$_BUFFER.=$data;
+    }
     /**
      * @brief 前进步长
      * @param $length
@@ -188,7 +214,8 @@ class BinLogPack {
     //
     public function readUint8()
     {
-        return unpack('C', $this->read(1))[1];
+        $read = $this->read(1);
+        return unpack('C', $read)[1];
     }
 
     //
@@ -286,9 +313,9 @@ class BinLogPack {
 
     public function read_int_be_by_size($size) {
         //Read a big endian integer values based on byte number
-        if ($size == 1)
+        if ($size == 1) {
             return unpack('c', $this->read($size))[1];
-        elseif( $size == 2)
+        } elseif( $size == 2)
             return unpack('n', $this->read($size))[1];
         elseif( $size == 3)
             return $this->read_int24_be();

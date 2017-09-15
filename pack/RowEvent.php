@@ -252,7 +252,7 @@ class RowEvent extends BinLogEvent
                 else
                     $values[$name] = self::_read_string(1, $column);
             } elseif ($column['type'] == ConstFieldType::NEWDECIMAL) {
-                //$values[$name] = self.__read_new_decimal(column)
+                $values[$name] = self::_read_new_decimal($column);
             } elseif ($column['type'] == ConstFieldType::BLOB) {
                 //ok
                 $values[$name] = self::_read_string($column['length_size'], $column);
@@ -305,7 +305,10 @@ class RowEvent extends BinLogEvent
 
             } elseif($column['type'] == ConstFieldType::ENUM) {
                 $values[$name] = $column['enum_values'][self::$PACK->read_uint_by_size($column['size']) - 1];
+            } elseif($column['type'] == ConstFieldType::DECIMAL) {
+                var_dump($column);exit;
             } else {
+                var_dump($column);exit;
             }
             /*
             elseif ($column['type'] == ConstFieldType::YEAR:
@@ -448,6 +451,59 @@ class RowEvent extends BinLogEvent
         return $time;
     }
 
+    private static function _read_new_decimal($column) {
+        #Read MySQL's new decimal format introduced in MySQL 5"""
+
+        # This project was a great source of inspiration for
+        # understanding this storage format.
+        # https://github.com/jeremycole/mysql_binlog
+
+        $digits_per_integer = 9;
+        $compressed_bytes = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4];
+        $integral = ($column['precision'] - $column['decimals']);
+        $uncomp_integral = intval($integral / $digits_per_integer);
+        $uncomp_fractional = intval($column['decimals'] / $digits_per_integer);
+        $comp_integral = $integral - ($uncomp_integral * $digits_per_integer);
+        $comp_fractional = $column['decimals'] - ($uncomp_fractional * $digits_per_integer);
+
+        # Support negative
+        # The sign is encoded in the high bit of the the byte
+        # But this bit can also be used in the value
+        $value = self::$PACK->readUint8();
+        if ( ($value & 0x80) != 0) {
+            $res  = "";
+            $mask = 0;
+        }else {
+            $mask = -1;
+            $res  = "-";
+        }
+        self::$PACK->unread(pack('C', $value ^ 0x80));
+        $size = $compressed_bytes[$comp_integral];
+        if ($size > 0) {
+            $value =  self::$PACK->read_int_be_by_size($size) ^ $mask;
+            $res .= (string)$value;
+        }
+
+
+        for($i=0;$i<$uncomp_integral;$i++) {
+            $value = unpack('N', self::$PACK->read(4))[1] ^ $mask;
+            $res .= sprintf('%09d' , $value);
+        }
+
+        $res .= ".";
+        for($i=0;$i<$uncomp_fractional;$i++) {
+            $value = unpack('N', self::$PACK->read(4))[1] ^ $mask;
+            $res .= sprintf('%09d' , $value);
+        }
+
+        $size = $compressed_bytes[$comp_fractional];
+        if ($size > 0) {
+            $value = self::$PACK->read_int_be_by_size($size) ^ $mask;
+
+            $res.=sprintf('%0'.$comp_fractional.'d' , $value);
+        }
+        return number_format($res,$comp_fractional,'.','');
+    }
 
 
 

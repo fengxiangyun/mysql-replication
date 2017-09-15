@@ -9,7 +9,7 @@ class Config {
 
     public static $DB_CONFIG = array(
             'username'  => 'root',
-            'hostname'  => 'slave',
+            'hostname'  => '127.0.0.1',
             'host'      => '127.0.0.1',
             'port'      => 3306,
             'password'  => '123456',

@@ -40,7 +40,7 @@ class Connect {
     private static $_GTID;
 
     // 模拟从库id 不能和主库冲突
-    private static $_SLAVE_SERVER_ID = 100;
+    private static $_SLAVE_SERVER_ID = 10;
 
     // 持久化file pos文件存储位置
     public static $FILE_POS;
@@ -94,7 +94,7 @@ class Connect {
             self::$_FLAG |= ConstCapability::$CONNECT_WITH_DB;
         }
 
-        //self::$_FLAG |= S::$MULTI_RESULTS;
+        self::$_FLAG |= ConstCapability::$MULTI_RESULTS;
 
         // 连接到mysql
         self::_connect();
@@ -179,29 +179,26 @@ class Connect {
     }
 
     /**
-     * @mysql gone away
+     * mysql gone away
+     * @param $msg
      */
-	private static function _goneAway($msg) {
+    private static function _goneAway($msg) {
         Log::error($msg . 'mysql server has gone away', 'mysqlBinlog', Config::$LOG['binlog']['error']);
     }
-
-
 
     private static function _readPacket() {
 
         //消息头
         $header = self::_readBytes(4);
-
         if($header === false) return false;
         //消息体长度3bytes 小端序
         $a = unpack("L",$header[0].$header[1].$header[2].chr(0))[1];
 
-//      $a = (int)(ord($header[0]) & 0xFF);
-//      $a += (int)((ord($header[1])& 0xFF) << 8);
-//      $a += (int)((ord($header[2])& 0xFF) << 16);
-        
+        //$a = (int)(ord($header[0]) & 0xFF);
+        //$a += (int)((ord($header[1])& 0xFF) << 8);
+        //$a += (int)((ord($header[2])& 0xFF) << 16);
         //序号 1byte 确认消息的顺序
-        $pack_num = unpack("C",$header[3])[1];
+        //$pack_num = unpack("C",$header[3])[1];
 
         $result = self::_readBytes($a);
         //echo '消息长度'.$a.'  read -> '.strlen($result)."\n";
@@ -244,11 +241,14 @@ class Connect {
         self::$_CHECKSUM = DBHelper::isCheckSum();
         if(self::$_CHECKSUM){
             self::excute("set @master_binlog_checksum= @@global.binlog_checksum");
+            self::_readPacket();
         }
+
         //heart_period
         $heart = (int)Config::$DB_CONFIG['heartbeat'];
         if($heart) {
             self::excute("set @master_heartbeat_period=".($heart*1000000000));
+            self::_readPacket();
         }
 
         self::_writeRegisterSlaveCommand();
@@ -265,7 +265,7 @@ class Connect {
         // 初始化
         BinLogPack::setFilePos(self::$_FILE, self::$_POS);
 
-        $header   = pack('l', 11 + strlen(self::$_FILE));
+        $header = pack('l', 11 + strlen(self::$_FILE));
 
         // COM_BINLOG_DUMP
         $data  = $header . chr(ConstCommand::COM_BINLOG_DUMP);
@@ -279,12 +279,11 @@ class Connect {
         //认证
         $result = self::_readPacket();
         PackAuth::success($result);
-
+        self::_writeRegisterSlaveCommand();
     }
 
     /**
      * @breif 解析binlog
-     * @param $checkSum
      */
     public static function analysisBinLog($flag = false) {
 
@@ -326,8 +325,8 @@ class Connect {
      * @breif 注册成slave
      * @return void
      */
-    private static function _writeRegisterSlaveCommand2() {
-        $len = 22+strlen(Config::$DB_CONFIG['username'])+
+    private static function _writeRegisterSlaveCommand() {
+        $len = 18+strlen(Config::$DB_CONFIG['username'])+
             strlen(Config::$DB_CONFIG['hostname'])+
             strlen(Config::$DB_CONFIG['password']);
         $header   = pack('l', $len);
@@ -345,17 +344,16 @@ class Connect {
 
         $data .= pack('s', Config::$DB_CONFIG['port']);
         $data .= pack('l', 0);
-        $data .= pack('l', 0);
+        $data .= pack('l', 1);
         self::_write($data);
-        $result = self::_readPacket();
-        PackAuth::success($result);
+        self::_readPacket();
     }
 
     /**
      * @breif 注册成slave
      * @return void
      */
-    private static function _writeRegisterSlaveCommand() {
+    private static function _writeRegisterSlaveCommand2() {
         $header   = pack('l', 18);
 
         // COM_BINLOG_DUMP
