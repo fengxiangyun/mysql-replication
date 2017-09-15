@@ -305,10 +305,8 @@ class RowEvent extends BinLogEvent
 
             } elseif($column['type'] == ConstFieldType::ENUM) {
                 $values[$name] = $column['enum_values'][self::$PACK->read_uint_by_size($column['size']) - 1];
-            } elseif($column['type'] == ConstFieldType::DECIMAL) {
-                var_dump($column);exit;
             } else {
-                var_dump($column);exit;
+                echo $column['type'] . " type(ConstFieldType.php) have not been support ,if need feedback";exit;
             }
             /*
             elseif ($column['type'] == ConstFieldType::YEAR:
