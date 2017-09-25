@@ -218,85 +218,70 @@ class RowEvent extends BinLogEvent
             if (self::_is_null($null_bitmap, $nullBitmapIndex)) {
                 $values[$name] = null;
             } elseif ($column['type'] == ConstFieldType::TINY) {
-                if ($unsigned)
+                if ($unsigned) {
                     $values[$name] = unpack("C", self::$PACK->read(1))[1];
-                else
+                } else {
                     $values[$name] = unpack("c", self::$PACK->read(1))[1];
+                }
             } elseif ($column['type'] == ConstFieldType::SHORT) {
-                if ($unsigned)
+                if ($unsigned) {
                     $values[$name] = unpack("S", self::$PACK->read(2))[1];
-                else
+                } else {
                     $values[$name] = unpack("s", self::$PACK->read(2))[1];
+                }
             } elseif ($column['type'] == ConstFieldType::LONG) {
-
                 if ($unsigned) {
                     $values[$name] = unpack("I", self::$PACK->read(4))[1];
                 } else {
                     $values[$name] = unpack("i", self::$PACK->read(4))[1];
-
                 }
             } elseif ($column['type'] == ConstFieldType::INT24) {
-                if ($unsigned)
+                if ($unsigned) {
                     $values[$name] = self::$PACK->read_uint24();
-                else
+                } else {
                     $values[$name] = self::$PACK->read_int24();
-            } elseif ($column['type'] == ConstFieldType::FLOAT)
+                }
+            } elseif ($column['type'] == ConstFieldType::FLOAT) {
                 $values[$name] = unpack("f", self::$PACK->read(4))[1];
-            elseif ($column['type'] == ConstFieldType::DOUBLE)
+            }
+            elseif ($column['type'] == ConstFieldType::DOUBLE) {
                 $values[$name] = unpack("d", self::$PACK->read(8))[1];
-            elseif ($column['type'] == ConstFieldType::VARCHAR ||
+            } elseif ($column['type'] == ConstFieldType::VARCHAR ||
                 $column['type'] == ConstFieldType::STRING
             ) {
-                if ($column['max_length'] > 255)
+                if ($column['max_length'] > 255) {
                     $values[$name] = self::_read_string(2, $column);
-                else
+                } else {
                     $values[$name] = self::_read_string(1, $column);
+                }
             } elseif ($column['type'] == ConstFieldType::NEWDECIMAL) {
                 $values[$name] = self::_read_new_decimal($column);
             } elseif ($column['type'] == ConstFieldType::BLOB) {
                 //ok
                 $values[$name] = self::_read_string($column['length_size'], $column);
-
-            }
-            elseif ($column['type'] == ConstFieldType::DATETIME) {
-
+            } elseif ($column['type'] == ConstFieldType::DATETIME) {
                 $values[$name] = self::_read_datetime();
             } elseif ($column['type'] == ConstFieldType::DATETIME2) {
                 //ok
                 $values[$name] = self::_read_datetime2($column);
             }elseif ($column['type'] == ConstFieldType::TIME2) {
-
                 $values[$name] = self::_read_time2($column);
-            }
-            elseif ($column['type'] == ConstFieldType::TIMESTAMP2){
+            } elseif ($column['type'] == ConstFieldType::TIMESTAMP2){
                 //ok
                 $time = date('Y-m-d H:i:m',self::$PACK->read_int_be_by_size(4));
                 // 微妙
-                $time .= '.' . self::_add_fsp_to_time($column);
+                $micro = self::_add_fsp_to_time($column);
+                if($micro) {
+                    $time .= '.' . self::_add_fsp_to_time($column);
+                }
                 $values[$name] = $time;
             }
-	    elseif ($column['type'] == ConstFieldType::DATE)
+            elseif ($column['type'] == ConstFieldType::DATE) {
                 $values[$name] = self::_read_date();
-                /*
-            elseif ($column['type'] == ConstFieldType::TIME:
-                $values[$name] = self.__read_time()
-            elseif ($column['type'] == ConstFieldType::DATE:
-                $values[$name] = self.__read_date()
-                */
+            }
             elseif ($column['type'] == ConstFieldType::TIMESTAMP) {
                 $values[$name] = date('Y-m-d H:i:s', self::$PACK->readUint32());
-            }
-
-            # For new date format:
-/*
-            elseif ($column['type'] == ConstFieldType::TIME2:
-                $values[$name] = self.__read_time2(column)
-            elseif ($column['type'] == ConstFieldType::TIMESTAMP2:
-                $values[$name] = self.__add_fsp_to_time(
-                        datetime.datetime.fromtimestamp(
-                            self::$PACK->read_int_be_by_size(4)), column)
-            */
-            elseif ($column['type'] == ConstFieldType::LONGLONG) {
+            } elseif ($column['type'] == ConstFieldType::LONGLONG) {
                 if ($unsigned) {
                     $values[$name] = self::$PACK->readUint64();
                 } else {
@@ -309,6 +294,8 @@ class RowEvent extends BinLogEvent
                 echo $column['type'] . " type(ConstFieldType.php) have not been support ,if need feedback";exit;
             }
             /*
+              elseif ($column['type'] == ConstFieldType::TIME:
+                $values[$name] = self.__read_time()
             elseif ($column['type'] == ConstFieldType::YEAR:
                 $values[$name] = self::$PACK->read_uint8() + 1900
             elseif ($column['type'] == ConstFieldType::SET:
@@ -370,6 +357,43 @@ class RowEvent extends BinLogEvent
         return $year.'-'.$month.'-'.$day;
     }
 
+    private static function _read_time2($column) {
+        /*
+        https://dev.mysql.com/doc/internals/en/date-and-time-data-type-representation.html
+        TIME encoding for nonfractional part:
+
+         1 bit sign    (1= non-negative, 0= negative)
+         1 bit unused  (reserved for future extensions)
+        10 bits hour   (0-838)
+         6 bits minute (0-59)
+         6 bits second (0-59)
+        ---------------------
+        24 bits = 3 bytes
+        */
+        $data = self::$PACK->read_int_be_by_size(3);
+
+        $sign = 1;
+        if (self::_read_binary_slice($data, 0, 1, 24) ) {
+        } else {
+            $sign = -1;
+        }
+        if ($sign == -1) {
+            # negative integers are stored as 2's compliment
+            # hence take 2's compliment again to get the right value.
+            $data = ~$data + 1;
+        }
+
+        $hours=$sign*self::_read_binary_slice($data, 2, 10, 24);
+        $minutes=self::_read_binary_slice($data, 12, 6, 24);
+        $seconds=self::_read_binary_slice($data, 18, 6, 24);
+        $microseconds=self::_add_fsp_to_time($column);
+        $t = $hours.':'.$minutes.':'.$seconds;
+        if($microseconds) {
+            $t .= '.'.$microseconds;
+        }
+        return $t;
+    }
+
     private static function  _read_datetime2($column) {
         /*DATETIME
 
@@ -429,8 +453,6 @@ class RowEvent extends BinLogEvent
             For more details about new date format:
             http://dev.mysql.com/doc/internals/en/date-and-time-data-type-representation.html
             */
-
-
         $read = 0;
         $time = '';
         if( $column['fsp'] == 1 or $column['fsp'] == 2)
