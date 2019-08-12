@@ -500,28 +500,30 @@ class RowEvent extends BinLogEvent
         self::$PACK->unread(pack('C', $value ^ 0x80));
         $size = $compressed_bytes[$comp_integral];
         if ($size > 0) {
-            $value =  self::$PACK->read_int_be_by_size($size) ^ $mask;
+            $f = self::$PACK->read_int_be_by_size($size);
+            $value = $f  ^ $mask;
             $res .= (string)$value;
         }
 
-
         for($i=0;$i<$uncomp_integral;$i++) {
-            $value = unpack('N', self::$PACK->read(4))[1] ^ $mask;
+            $value = self::$PACK->read_int_be_by_size(4) ^ $mask;
             $res .= sprintf('%09d' , $value);
         }
 
+
         $res .= ".";
         for($i=0;$i<$uncomp_fractional;$i++) {
-            $value = unpack('N', self::$PACK->read(4))[1] ^ $mask;
+            $value = self::$PACK->read_int_be_by_size(4) ^ $mask;
             $res .= sprintf('%09d' , $value);
         }
 
         $size = $compressed_bytes[$comp_fractional];
         if ($size > 0) {
-            $value = self::$PACK->read_int_be_by_size($size) ^ $mask;
-
+            $f = self::$PACK->read_int_be_by_size($size);
+            $value = $f  ^ $mask;
             $res.=sprintf('%0'.$comp_fractional.'d' , $value);
         }
+        //todo 超过int范围无法解析此函数 ex:11111111111199876665554567.001
         return number_format($res,$comp_fractional,'.','');
     }
 
@@ -531,7 +533,7 @@ class RowEvent extends BinLogEvent
         $rows = [];
         while(!self::$PACK->isComplete(self::$PACK_SIZE)) {
 
-            $value['beform'] = self::_read_column_data($result['bitmap1'], $len);
+            $value['before'] = self::_read_column_data($result['bitmap1'], $len);
             $value['after'] = self::_read_column_data($result['bitmap2'], $len);
             $rows[] = $value['after'];
         }

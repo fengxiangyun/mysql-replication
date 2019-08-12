@@ -311,21 +311,46 @@ class BinLogPack {
         return $this->read($length);
     }
 
+    /**
+     * @param $size
+     * @return float|int
+     */
     public function read_int_be_by_size($size) {
         //Read a big endian integer values based on byte number
         if ($size == 1) {
-            return unpack('c', $this->read($size))[1];
-        } elseif( $size == 2)
-            return unpack('n', $this->read($size))[1];
+            $re = unpack('c', $this->read($size))[1];
+            if($re>127) {
+                return $re-pow(2,8);
+            }
+            return $re;
+        } elseif( $size == 2) {
+            $re = unpack('n', $this->read($size))[1];
+            if($re>32767) {
+                return $re-pow(2,16);
+            }
+            return $re;
+        }
         elseif( $size == 3)
             return $this->read_int24_be();
-        elseif( $size == 4)
-            return unpack('N', $this->read($size))[1];
+        elseif( $size == 4){
+            $re = unpack('N', $this->read($size))[1];
+            if($re > 2147483647) {
+                return ($re-pow(2,32));
+            }
+            return $re;
+
+        }
         elseif( $size == 5)
             return $this->read_int40_be();
         //TODO
-        elseif( $size == 8)
-            return unpack('N', $this->read($size))[1];
+        elseif($size == 8) {
+            $re = unpack('N', $this->read($size))[1];
+            return $re;
+            if($re > 2147483647) {
+                return ($re-pow(2,64));
+            }
+            return $re;
+        }
     }
 
     /**
